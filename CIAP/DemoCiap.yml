@@ -1,0 +1,21 @@
+---
+# necessary elements
+name: Demo-Ciap
+author: PEMapModder
+version-code: 0
+min-api: 0
+target-api: 0
+# commands
+commands:
+  example-1:
+    allow-non-op-use: false
+    description: <arg0> [arg1] Runs an example-1 command
+    actions:
+      - COND_RUN 
+#events
+events:
+  player_join-username_PEMapModder|PEMapModders|12458|yy:
+    - CHAT_SEND TO @username@ Welcome to EYCraft!
+    - CHAT_SEND The owner of EYCraft joined the game!
+    - PREVENT_DEFAULT
+...

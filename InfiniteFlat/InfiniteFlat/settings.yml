@@ -1,0 +1,6 @@
+---
+World generation efficiency: true
+Overlapping chunks: 2
+Number of worlds preloaded for buffer for players near world margin: 1
+default preset: 0
+...

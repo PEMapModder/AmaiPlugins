@@ -1,0 +1,36 @@
+---
+events:
+  item-use:
+    parameters:
+      id: the intergral ID of the block (refer to http://minecraftwiki.net/wiki/Data_values_(Pocket_Edition) )
+      damage: the damage value of the block
+      item-id: the item the player is holding
+      item-damage: the damage value of the item held by the player
+      item-count: the count of the item held by the player
+    description: its actions are called when the player is holding the item
+actions:
+  CMD_RUN: run a command on console
+  CHAT_SEND:
+    description: send a chat
+    usage:
+      - CHAT_SEND (TO $target) $message
+      - All occurrences of @target@ are replaced by the receiver
+      - broadcast if TO $target is not given
+  VAR_STO:
+    description: stores a text into a variable
+    usage:
+      - VAR_STO (RESERVE) VAR_NAME $varName VAR_VALUE $anyExpression
+      - you can put things like <READ_DATA LARGE_DB @player@ DATUM_KEY datum key> for $anyExpression
+  SAVE_DATA:
+    description: save readable data into a config
+    usage:
+      - SAVE_DATUM (LARGE_DB $dbName) DATUM_KEY $datumKey DATUM_VALUE $datum
+      - will be saved into individual file if LARGE_DB $dbName is given.
+      - otherwise will be saved into the config of the plugin
+      - a CIAP_COMPILE_ERROR-ILLEGAL_ARGUMENTS error will be generated if DATUM_KEY or DATUM_VALUE are not given or are followed by nothing
+  READ_DATA:
+    description: read data into a config
+text processor:
+  @variablename@: @variablename@ will be replaced by the value if there is such variable or parameter. If not, it will not be proceeded.
+  backslash: Anything followed by a backslash (\) will be processed as a plain text (instead of calling functions, using variables, or whatever)
+...

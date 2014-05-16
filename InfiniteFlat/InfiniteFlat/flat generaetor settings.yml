@@ -1,0 +1,87 @@
+---
+help:
+  presets:
+  - Follow the following example
+  - preset name:
+      layers:
+      - - ID
+        - number of layers
+      populators:
+      - - generation method (see below)
+        - extra data
+        - random count minimum
+        - random count maximum
+  - generation methods listed below
+  - method name:
+    - explanation
+    - - extra data
+    pillar:
+    - create random pillars on the topmost layer
+    - - Block ID
+      - height
+    tree:
+    - grow a tree on the topmost layer
+    - - tree type, 0-3
+    area:
+    - change part of the ground into this shape
+    - - Block ID
+      - random depth minimum
+      - random depth maximum
+      - shape - circle, square
+      - random side-length/radius minimum
+      - random size maximum
+presets:
+  forest:
+    layers:
+    - - 7
+      - 1
+    - - 1
+      - 59
+    - - 3
+      - 3
+    - - 2
+      - 1
+    populators:
+    - - tree
+      - - 0
+      - 150
+      - 190
+    - - tree
+      - - 2
+      - 80
+      - 120
+    - - area
+      - - 9
+        - 2
+        - 4
+        - circle
+        - 4
+        - 7
+      - 6
+      - 10
+  desert:
+    layers:
+    - - 7
+      - 1
+    - - 1
+      - 58
+    - - 24
+      - 2
+    - - 12
+      - 3
+    populators:
+    - - pillar
+      - - 81
+        - 2
+      - 90
+      - 130
+    - - area
+      - - 9
+        - 2
+        - 4
+        - circle
+        - 4
+        - 7
+      - 6
+      - 10
+...
