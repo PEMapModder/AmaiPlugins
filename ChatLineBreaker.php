@@ -33,12 +33,12 @@ class ChatLineBreaker implements \Plugin{
 		if(is_file($this->cfgPath."json")){
 			$this->cfgPath .= "json";
 			$this->type = CONFIG_JSON;
-			console("JSON", 2);
+			console("JSON", true, true, 2);
 		}
 		else{
 			$this->cfgPath .= "yml";
 			$this->type = CONFIG_YAML;
-			console("YML", 2);
+			console("YML", true, true, 2);
 		}
 		$this->config();
 		echo ".";
@@ -54,6 +54,7 @@ class ChatLineBreaker implements \Plugin{
 			return;
 		}
 		$msg = $data["message"];
+		$cid = $p->data->get("lastID");
 		if(!is_numeric($msg)){
 			$p->sendChat("Please type in the length!");
 			return false;
@@ -72,12 +73,30 @@ class ChatLineBreaker implements \Plugin{
 		unset($this->testing[array_search($p->CID, $this->testing)]);
 		return false;
 	}
+	public function onQuit($p){
+		if(in_array($p->CID, $this->testing)){
+			unset($this->testing[array_search($p->CID, $this->testing)]);
+		}
+	}
 	public function onSend(\DataPacketSendEvent $evt){
 		if(!(($pk = $evt->getPacket()) instanceof \MessagePacket)){
 			return;
 		}
-		$pk->message = $this->processMessage($evt->getPlayer()->data->get("lastID"), $pk->message); // thanks for making it public property, shoghicp!
-		// I made it use client ID because the line break length should depend on the 
+		if($evt->getPacket()->source === "clb.followup.linebreak"){
+			$evt->getPacket()->source = "";
+			return;
+		}
+		$packets = $this->processMessage($evt->getPlayer()->data->get("lastID"), $pk->message, $evt->getPlayer()); // thanks for making it public property, shoghicp!
+		if($packets === false)
+			return;
+		// I made it use client ID because the line break length should depend on the device not the player or IP
+		$evt->setCancelled(true);
+		foreach($packets as $pk){
+			$evt->getPlayer()->dataPacket($pk);
+		}
+		if(defined("DEBUG") and DEBUG >= 2){
+			// var_export($pk);
+		}
 	}
 	public function onCmd($cmd, $args, $issuer){
 		if($issuer === "console"){
@@ -95,7 +114,7 @@ class ChatLineBreaker implements \Plugin{
 				$msgs = $this->getTesterMessage();
 				$output .= array_shift($msgs);
 				foreach($msgs as $key=>$value){
-					$this->api->schedule(40 * ($key + 1), array($issuer, "sendChat"), $value, false, "clb.cmd.cal"); // why did you add this 5th arg...
+					$this->api->schedule(40 * ($key + 1), array($issuer, "sendChat"), $value, false, ""); // why did you add this 5th arg...
 				}
 				$this->testing[] = $issuer->CID;
 				break;
@@ -135,6 +154,9 @@ class ChatLineBreaker implements \Plugin{
 				$output .= "\"/clb view\" or \"/clb check\" to check if CLB is enabled for you.\n";
 				$output .= "\"/clb tog\" or \"/clb toggle\" to toggle your CLB.\n";
 		}
+		if(defined("DEBUG") and DEBUG >= 2){
+			var_export($output);
+		}
 		return $output;
 	}
 	private function getLength($cid){
@@ -168,11 +190,22 @@ class ChatLineBreaker implements \Plugin{
 	private function getData($cid){
 		return $this->database[$cid];
 	}
-	private function processMessage($clientID, $message){
+	private function processMessage($clientID, $message, \Player $p){
 		if(!$this->isEnabled($clientID)){
-			return $message;
+			return false;
 		}
-		return wordwrap($message, $this->getLength($clientID), "\n");
+		$wrapped = explode("\n", wordwrap($message, $this->getLength($clientID), "\n"));
+		if(count($wrapped) === 1){
+			return false;
+		}
+		$packets = array();
+		foreach($wrapped as $wrap){
+			$pk = new \MessagePacket;
+			$pk->source = "clb.followup.linebreak";
+			$pk->message = $wrap;
+			$packets[] = $pk;
+		}
+		return $packets;
 	}
 	private function save(){
 		\console("[INFO] Saving CLB database...", true, true, 2);
