@@ -35,16 +35,15 @@ class ChatLineBreaker implements \Plugin{
 		\DataPacketSendEvent::register(array($this, "onSend"), \EventPriority::LOW);
 		$this->api->addHandler("player.chat", array($this, "onChat"), 50);
 		echo ".";
-		// $this->server->addHandler("clb.player.length.get", array($this, "getLength"), 50);
-		// $this->server->addHandler("clb.player.enable.get", array($this, "isEnabled"), 50);
-		// $this->server->addHandler("clb.data.get", array($this, "getData"), 50);
-		// $this->server->addHandler("clb.player.length.set", array($this, "eventSetLength"), 50);
-		// $this->server->addHandler("clb.player.enable.set", array($this, "eventSetEnabled"), 50);
-		// $this->server->addHandler("clb.db.reload", array($this, "load"), 50);
-		// $this->server->addHandler("clb.config.reload", array($this, "config"), 50);
-		// $this->server->addHandler("clb.db.save", array($this, "save"), 50);
-		// echo ".";
-		// No idea why these won't work...
+		$this->server->addHandler("clb.player.length.get", array($this, "getLength"), 50);
+		$this->server->addHandler("clb.player.enable.get", array($this, "isEnabled"), 50);
+		$this->server->addHandler("clb.data.get", array($this, "getData"), 50);
+		$this->server->addHandler("clb.player.length.set", array($this, "eventSetLength"), 50);
+		$this->server->addHandler("clb.player.enable.set", array($this, "eventSetEnabled"), 50);
+		$this->server->addHandler("clb.db.reload", array($this, "load"), 50);
+		$this->server->addHandler("clb.config.reload", array($this, "config"), 50);
+		$this->server->addHandler("clb.db.save", array($this, "save"), 50);
+		echo ".";
 		$this->path = $this->api->plugin->configPath($this)."players.dat";
 		$this->cfgPath = $this->api->plugin->configPath($this)."config.";
 		if(is_file($this->cfgPath."json")){
@@ -58,6 +57,8 @@ class ChatLineBreaker implements \Plugin{
 			console("YML", true, true, 2);
 		}
 		$this->config();
+		$this->langPath = $this->api->plugin->configPath($this)."texts.lang";
+		$this->lang = new Lang($this->langPath);
 		echo ".";
 		$this->load();
 		$time *= -1;
@@ -87,20 +88,20 @@ class ChatLineBreaker implements \Plugin{
 		$msg = $data["message"];
 		$cid = $p->data->get("lastID");
 		if(!is_numeric($msg)){
-			$p->sendChat("Please type in the length!");
+			$p->sendChat($this->lang["calibrate.response.not.numeric"]);
 			return false;
 		}
 		$l = (int) $msg;
 		if($l <= 5){
-			$issuer->sendChat("I don't believe you! I don't think your device can only show $l characters!\n");
+			$issuer->sendChat(str_replace("@char", "$l", $this->lang["calibrate.response.too.low"]));
 			return false;
 		}
 		if($l >= 0b10000000){
-			$issuer->sendChat("Sorry, our database does not support numbers larger than 127. I don't believe you have such a mega machine though.");
+			$issuer->sendChat(str_replace("@char", "$l", $this->lang["calibrate.response.too.high"]));
 			return false;
 		}
 		$this->setLength($cid, $l);
-		$p->sendChat("Your CLB length is now $l.\n");
+		$p->sendChat(str_replace("@char", "$l", $this->lang["calibrate.response.succeed"]));
 		unset($this->testing[array_search($p->CID, $this->testing)]);
 		return false;
 	}
@@ -131,10 +132,10 @@ class ChatLineBreaker implements \Plugin{
 	}
 	public function onCmd($cmd, $args, $issuer){
 		if($issuer === "console"){
-			return "Right-click the console or edit start.cmd to change your fonts, not here."; // lol
+			return $this->lang["cmd.console.reject"]; // lol // console things don't need lang
 		}
 		if($issuer === "rcon"){
-			return "Did you expect we can modify your RCon client preferences for you? We are not hackers!"; // lol * 2
+			return "Did you expect we can modify your RCon client preferences for you? We are not hackers!"; // lol * 2 // nor do rcon things
 		}
 		$cmd = array_shift($args);
 		$output = "[CLB] ";
@@ -145,18 +146,18 @@ class ChatLineBreaker implements \Plugin{
 				$msgs = $this->getTesterMessage();
 				$output .= array_shift($msgs);
 				foreach($msgs as $key=>$value){
-					$this->api->schedule(40 * ($key + 1), array($issuer, "sendChat"), $value, false, ""); // why did you add this 5th arg...
+					$this->api->schedule(40 * ($key + 1), array($issuer, "sendChat"), $value, false, "ChatLineBreaker"); // why did you add this 5th arg...
 				}
 				$this->testing[] = $issuer->CID;
 				break;
 			case "set":
 				$l = (int) array_shift($args);
 				if($l <= 5){
-					$output .= "I don't believe you! I don't think your device can only show $l characters!\n";
+					$output .= $this->lang["calibrate.response.not.numeric"]."\n";
 					break;
 				}
 				if($l >= 0b10000000){
-					$output .= "Sorry, our database does not support numbers larger than 127. I don't believe you have such a mega machine though.";
+					$output .= str_replace("@char", "$l", $this->lang["calibrate.response.too.low"])."\n";
 					break;
 				}
 				$this->setLength($cid, $l);
@@ -165,15 +166,13 @@ class ChatLineBreaker implements \Plugin{
 			case "check":
 			case "view":
 				$l = $this->getLength($cid);
-				$b = $this->isEnabled($cid) ? "enabled":"disabled";
-				$output .= "CLB is $b for you.\n";
-				$output .= "Your CLB length is $l.\n";
+				$output .= $this->lang["view.".($this->isEnabled($cid) ? "on":"off")];
+				$output .= str_replace("@length", "$l", $this->lang["view.length"]);
 				break;
 			case "tog":
 			case "toggle":
 				$this->setEnabled($cid, ($b = !$this->isEnabled($cid)));
-				$b = $b ? "enabled":"disabled";
-				$output .= "CLB is now $b for you.\n";
+				$output .= $this->lang["toggle.".($b ? "on":"off")];
 				break;
 			case "help":
 				$output .= "Showing help for /clb\n";
@@ -190,25 +189,25 @@ class ChatLineBreaker implements \Plugin{
 		}
 		return $output;
 	}
-	private function getLength($cid){
+	public function getLength($cid){
 		if(isset($this->database[$cid])){
 			return $this->database[$cid][1];
 		}
 		return $this->config->get("default-length");
 	}
-	private function setLength($cid, $length){
+	public function setLength($cid, $length){
 		$this->database[$cid] = array($this->isEnabled($cid), $length);
 	}
-	private function isEnabled($cid){
+	public function isEnabled($cid){
 		if(isset($this->database[$cid])){
 			return $this->database[$cid][0];
 		}
 		return $this->config->get("default-enable");
 	}
-	private function setEnabled($cid, $bool){
+	public function setEnabled($cid, $bool){
 		$this->database[$cid] = array($bool, $this->getLength($cid));
 	}
-	private function getTesterMessage(){
+	public function getTesterMessage(){
 		$numbers = "";
 		for($i = 1; $i < 10; $i++){
 			$numbers .= "$i";
@@ -216,12 +215,17 @@ class ChatLineBreaker implements \Plugin{
 		for($i = 11; $i < 100; $i+= 3){
 			$numbers .= "$i,";
 		}
-		return array("First, please close your chat screen.", "Now look at the above message:", $numbers, "-------------------------\nWhat is the last number visible? It is your CLB length.", "Type your CLB length in chat directly.");
+		return array($this->lang["calibrate.instruction.close.screen"],
+			$this->lang["calibrate.instruction.next.message"],
+			$numbers,
+			$this->lang["calibrate.instruction.hyphens.separator"],
+			$this->lang["calibrate.instruction.ask.number"],
+			$this->lang["calibrate.instruction.require.type.chat"]);
 	}
-	private function getData($cid){
+	public function getData($cid){
 		return $this->database[$cid];
 	}
-	private function processMessage($clientID, $message, \Player $p){
+	public function processMessage($clientID, $message, \Player $p){
 		if(!$this->isEnabled($clientID)){
 			return false;
 		}
@@ -238,7 +242,7 @@ class ChatLineBreaker implements \Plugin{
 		}
 		return $packets;
 	}
-	private function save(){
+	public function save(){
 		\console("[INFO] Saving CLB database...", true, true, 2);
 		$time = microtime(true);
 		$buffer = self::MAGIC_PREFIX;
@@ -255,7 +259,7 @@ class ChatLineBreaker implements \Plugin{
 		file_put_contents($this->path, $buffer, LOCK_EX);
 		\console("Done!", true, true, 2);
 	}
-	private function load(){
+	public function load(){
 		\console("[INFO] Loading CLB database...", true, true, 2);
 		$time = 0 - microtime(true);
 		$str = @file_get_contents($this->path);
@@ -306,7 +310,7 @@ class ChatLineBreaker implements \Plugin{
 		}
 		return false;
 	}
-	private function config(){
+	public function config(){
 		$this->config = new \Config($this->cfgPath, $this->type, array(
 			"default-enable" => true,
 			"default-length" => 50,
@@ -314,5 +318,93 @@ class ChatLineBreaker implements \Plugin{
 	}
 	public function __destruct(){
 		$this->save();
+	}
+}
+
+class Lang implements \ArrayAccess{
+	public function __construct($path){
+		$this->path = $path;
+		$this->default = [
+			"calibrate.instruction.close.screen" => "First, please close your chat screen.",
+			"calibrate.instruction.next.message" => "Now look at the above message:",
+			"calibrate.instruction.hyphens.separator" => "-------------------------",
+			"calibrate.instruction.ask.number" => "What is the last number visible? It is your CLB length.",
+			"calibrate.instruction.require.type.chat" => "Type your CLB length in chat directly.",
+			"calibrate.response.not.numeric" => "Please type in the length!",
+			"calibrate.response.too.low" => "I don't believe you! I don't think your device can only show @char characters!",
+			"calibrate.response.too.high" => "Sorry, our database does not support numbers larger than 127. I don't believe you have such a mega machine though to show @char characters.",
+			"calibrate.response.succeed" => "Your CLB length is now @char.",
+			"view.on" => "CLB is enabled for you",
+			"view.off" => "CLB is disabled for you",
+			"view.length" => "Your CLB length is @length",
+			"toggle.on" => "CLB is now enabled for you",
+			"toggle.off" => "CLB is now disabled for you",
+			"cmd.console.reject" => "Right-click the console or edit start.cmd to change your fonts, not here.",
+			
+		];
+		if(is_file($this->path)){
+			$this->load();
+		}
+		else{
+			$this->data = $this->default;
+			$this->save();
+		}
+	}
+	public function offsetGet($k){
+		if(isset($this->data[$k])){
+			return $this->data[$k];
+		}
+		return $this->data[$k];
+	}
+	public function offsetSet($k, $v){
+		$this->data[$k] = $v;
+	}
+	public function offsetUnset($k){
+		unset($this->data[$k]);
+	}
+	public function offsetExists($k){
+		return isset($this->data[$k]) or isset($this->default[$k]);
+	}
+	public function save(){
+		$output = "";
+		foreach($this->data as $key=>$value){
+			$k = strpos($key, "=") === false ? $key : (strpos($key, "'=") === false ? "'$key'" : "\"$key\"");
+			$output .= "$k=$value";
+			$output .= PHP_EOL;
+		}
+		file_put_contents($this->path, $output);
+	}
+	public function load(){
+		foreach(explode(PHP_EOL, file_get_contents($this->path)) as $key=>$line){
+			if(substr($line, 0, 1) === "#" or $line === ""){
+				continue;
+			}
+			if(strpos($line, "=") === false){
+				$this->error($key);
+				continue;
+			}
+			if(strpos($line, "\"") === 0){
+				$length = strpos($line, "\"", 1);
+				if(substr($line, $length + 1, 1) !== "="){
+					$this->error($key);
+					continue;
+				}
+				$this->data[strstr(substr($line, 1), "\"=", true)] = substr($line, $length + 2);
+				continue;
+			}
+			if(strpos($line, "'") === 0){
+				$length = strpos($line, "'", 1);
+				if(substr($line, $length + 1, 1) !== "="){
+					$this->error($key);
+					continue;
+				}
+				$this->data[strstr(substr($line, 1), "'=", true)] = substr($line, $length + 2);
+				continue;
+			}
+			$this->data[strstr($line, "=", true)] = substr(strstr($line, "="), 1);
+		}
+	}
+	protected function error($line){
+		trigger_error("Syntax error on line $line at {$this->path} lang file", E_USER_WARNING);
 	}
 }
