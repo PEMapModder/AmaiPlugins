@@ -5,14 +5,21 @@ __PocketMine Plugin__
 class=pemapmodder\clb\ChatLineBreaker
 name=ChatLineBreaker
 author=PEMapModder
-version=3
+version=3.1
 apiversion=12
 */
 
 namespace pemapmodder\clb;
 
 class ChatLineBreaker implements \Plugin{
-	const MAGIC = "CLBDB==>";
+	const MAGIC_PREFIX = "\x00\xffCLBDB>";
+	const MAGIC_SUFFIX = "=CLBDB\xff\x00";
+	const CORRUPTION_PREFIX = "prefix";
+	const CORRUPTION_SUFFIX = "suffix";
+	const CORRUPTION_API = "unsupported api";
+	const CURRENT_VERSION = "\x01";
+	const INITIAL_RELEASE = "";
+	const DATABASE_UPDATE = "\x01";
 	public $api;
 	public $database = array();
 	public $testing = array();
@@ -22,12 +29,22 @@ class ChatLineBreaker implements \Plugin{
 	}
 	public function init(){
 		\console(FORMAT_LIGHT_PURPLE."Loading ChatLineBreaker", false);
+		$this->server = \ServerAPI::request();
 		$time = microtime(true);
+		$this->api->console->register("clb", "<cal|set|view|tog|help> Calibrate/set/view your CLB settings; Toggle using CLB", array($this, "onCmd"));
 		\DataPacketSendEvent::register(array($this, "onSend"), \EventPriority::LOW);
 		$this->api->addHandler("player.chat", array($this, "onChat"), 50);
 		echo ".";
-		$this->api->console->register("clb", "<cal|set|view|tog|help> Calibrate/set/view your CLB settings; Toggle using CLB", array($this, "onCmd"));
-		echo ".";
+		// $this->server->addHandler("clb.player.length.get", array($this, "getLength"), 50);
+		// $this->server->addHandler("clb.player.enable.get", array($this, "isEnabled"), 50);
+		// $this->server->addHandler("clb.data.get", array($this, "getData"), 50);
+		// $this->server->addHandler("clb.player.length.set", array($this, "eventSetLength"), 50);
+		// $this->server->addHandler("clb.player.enable.set", array($this, "eventSetEnabled"), 50);
+		// $this->server->addHandler("clb.db.reload", array($this, "load"), 50);
+		// $this->server->addHandler("clb.config.reload", array($this, "config"), 50);
+		// $this->server->addHandler("clb.db.save", array($this, "save"), 50);
+		// echo ".";
+		// No idea why these won't work...
 		$this->path = $this->api->plugin->configPath($this)."players.dat";
 		$this->cfgPath = $this->api->plugin->configPath($this)."config.";
 		if(is_file($this->cfgPath."json")){
@@ -48,6 +65,20 @@ class ChatLineBreaker implements \Plugin{
 		$time *= 1000;
 		echo " Done! ($time ms)".PHP_EOL;
 	}
+	public function eventSetLength($data){
+		if(!isset($data["cid"]) or !isset($data["length"])){
+			return false;
+		}
+		$this->setLength($data["cid"], $data["length"]);
+		return true;
+	}
+	public function eventSetEnabled($data){
+		if(!isset($data["cid"]) or !isset($data["bool"])){
+			return false;
+		}
+		$this->setEnabled($data["cid"], $data["bool"]);
+		return true;
+	}
 	public function onChat($data){
 		$p = $data["player"];
 		if(!in_array($p->CID, $this->testing)){
@@ -65,7 +96,7 @@ class ChatLineBreaker implements \Plugin{
 			return false;
 		}
 		if($l >= 0b10000000){
-			$issuer->sendChat("Our database does not support numbers larger than 127.");
+			$issuer->sendChat("Sorry, our database does not support numbers larger than 127. I don't believe you have such a mega machine though.");
 			return false;
 		}
 		$this->setLength($cid, $l);
@@ -125,7 +156,7 @@ class ChatLineBreaker implements \Plugin{
 					break;
 				}
 				if($l >= 0b10000000){
-					$output .= "Our database does not support numbers larger than 127.";
+					$output .= "Sorry, our database does not support numbers larger than 127. I don't believe you have such a mega machine though.";
 					break;
 				}
 				$this->setLength($cid, $l);
@@ -182,8 +213,8 @@ class ChatLineBreaker implements \Plugin{
 		for($i = 1; $i < 10; $i++){
 			$numbers .= "$i";
 		}
-		for($i = 11; $i < 100; $i+= 2){
-			$numbers .= "$i";
+		for($i = 11; $i < 100; $i+= 3){
+			$numbers .= "$i,";
 		}
 		return array("First, please close your chat screen.", "Now look at the above message:", $numbers, "-------------------------\nWhat is the last number visible? It is your CLB length.", "Type your CLB length in chat directly.");
 	}
@@ -210,7 +241,8 @@ class ChatLineBreaker implements \Plugin{
 	private function save(){
 		\console("[INFO] Saving CLB database...", true, true, 2);
 		$time = microtime(true);
-		$buffer = "";
+		$buffer = self::MAGIC_PREFIX;
+		$buffer .= self::CURRENT_VERSION;
 		foreach($this->database as $cid=>$data){
 			$buffer .= \Utils::writeLong($cid);
 			$ascii = $data[1];
@@ -219,6 +251,7 @@ class ChatLineBreaker implements \Plugin{
 			}
 			$buffer .= chr($ascii);
 		}
+		$buffer .= self::MAGIC_SUFFIX;
 		file_put_contents($this->path, $buffer, LOCK_EX);
 		\console("Done!", true, true, 2);
 	}
@@ -229,6 +262,33 @@ class ChatLineBreaker implements \Plugin{
 		if($str === false){
 			$this->save();
 			return true;
+		}
+		$isOld = (strlen($str) % 9) === 0;
+		if(!$isOld){
+			if(substr($str, 0, strlen(self::MAGIC_PREFIX)) !== self::MAGIC_PREFIX){
+				if($this->api->dhandle("clb.db.corrupt", self::CORRUPTION_PREFIX) !== false){
+					$this->database = array();
+					$this->save();
+					trigger_error("CLB database corrupted. Component corrupted: ".self::CORRUPTION_PREFIX, E_USER_ERROR);
+				}
+			}
+			if(substr($str, -1 * strlen(self::MAGIC_SUFFIX)) !== self::MAGIC_SUFFIX){
+				if($this->api->dhandle("clb.db.corrupt", self::CORRUPTION_SUFFIX) !== false){
+					$this->database = array();
+					$this->save();
+					trigger_error("CLB database corrupted. Component corrupted: ".self::CORRUPTION_SUFFIX, E_USER_ERROR);
+				}
+			}
+			$str = substr($str, strlen(self::MAGIC_PREFIX), -1 * strlen(self::MAGIC_SUFFIX));
+			$api = substr($str, 0, 1);
+			if($api > self::CURRENT_VERSION){
+				if($this->api->dhandle("clb.db.corrupt", self::CORRUPTION_API) !== false){
+					$this->database = array();
+					$this->save();
+					trigger_error("CLB database corrupted. Component corrupted: ".self::CORRUPTION_API, E_USER_ERROR);
+				}
+			}
+			$str = substr($str, 1);
 		}
 		for($i = 0; $i < strlen($str); $i+= 9){
 			$cur = substr($str, $i, 9);
@@ -241,6 +301,9 @@ class ChatLineBreaker implements \Plugin{
 		$time += microtime(true);
 		$time *= 1000;
 		\console("Done! ($time ms)", true, true, 2);
+		if(defined("DEBUG") and DEBUG >= 2){
+			var_export($this->database);
+		}
 		return false;
 	}
 	private function config(){
