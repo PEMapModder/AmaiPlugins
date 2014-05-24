@@ -19,7 +19,7 @@ class ChatLineBreaker implements \Plugin{
 	const CORRUPTION_API = "unsupported api";
 	const CURRENT_VERSION = "\x01";
 	const INITIAL_RELEASE = "";
-	const DATABASE_UPDATE = "\x01";
+	const DB_LANG_UPDATE = "\x01";
 	public $api;
 	public $database = array();
 	public $testing = array();
@@ -132,10 +132,10 @@ class ChatLineBreaker implements \Plugin{
 	}
 	public function onCmd($cmd, $args, $issuer){
 		if($issuer === "console"){
-			return $this->lang["cmd.console.reject"]; // lol // console things don't need lang
+			return $this->lang["cmd.console.reject"]; // lol
 		}
 		if($issuer === "rcon"){
-			return "Did you expect we can modify your RCon client preferences for you? We are not hackers!"; // lol * 2 // nor do rcon things
+			return "Did you expect we can modify your RCon client preferences for you? We are not hackers!"; // lol * 2
 		}
 		$cmd = array_shift($args);
 		$output = "[CLB] ";
@@ -322,6 +322,7 @@ class ChatLineBreaker implements \Plugin{
 }
 
 class Lang implements \ArrayAccess{
+	public $data = array();
 	public function __construct($path){
 		$this->path = $path;
 		$this->default = [
@@ -343,6 +344,7 @@ class Lang implements \ArrayAccess{
 			
 		];
 		if(is_file($this->path)){
+			$this->data = $this->default;
 			$this->load();
 		}
 		else{
