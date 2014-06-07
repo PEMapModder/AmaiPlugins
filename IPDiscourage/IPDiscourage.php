@@ -57,7 +57,7 @@ class IPDiscourage implements Plugin{
 	}
 	public function onCmd($data){
 		if($data["issuer"] instanceof Player and in_array($data["issuer"]->ip, $this->banned)){
-			return false; // whatever it is
+			return true; // whatever it is
 		}
 	}
 }
