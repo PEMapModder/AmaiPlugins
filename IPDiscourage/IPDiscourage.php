@@ -23,6 +23,7 @@ class IPDiscourage implements Plugin{
 			"ban message shown to the banned player (if online)" => "You have been banned by @banner!",
 		));
 		$this->a->addHandler("console.command", array($this, "onCmd"), 51);
+		$this->a->addHandler("player.spawn", array($this, "onJoin", 51));
 	}
 	public function __destruct(){
 		file_put_contents($this->path, implode(PHP_EOL, $this->banned));
