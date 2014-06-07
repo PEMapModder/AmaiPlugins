@@ -55,6 +55,16 @@ class IPDiscourage implements Plugin{
 		$this->a->chat->broadcast($msg);
 		return "$ip has banned!";
 	}
+	public function onJoin($data){
+		if(in_array($data->ip, $this->banned)){
+			$path = $this->a->plugin->configPath(SimpleAuthAPI::get())."players/".$data->iusername{0}."/".$data->iusername.".yml";
+			if(!is_file($path)) return;
+			$d = yaml_parse(file_get_contents($path));
+			if($d["lastip"] === "trolled") return;
+			$d["lastip"] = "trolled";
+			$this->a->plugin->writeYAML($path, $d); // avoid IP auth
+		}
+	}
 	public function onCmd($data){
 		if($data["issuer"] instanceof Player and in_array($data["issuer"]->ip, $this->banned)){
 			return true; // whatever it is
