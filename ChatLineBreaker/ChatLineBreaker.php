@@ -92,6 +92,7 @@ class ChatLineBreaker implements \Plugin{
 			return false;
 		}
 		$l = (int) $msg;
+		$issuerr = $p; // such a lazy fix... :P
 		if($l <= 5){
 			$issuer->sendChat(str_replace("@char", "$l", $this->lang["calibrate.response.too.low"]));
 			return false;
