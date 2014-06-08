@@ -10,10 +10,13 @@ author=PEMapModder
 */
 
 class IPDiscourage implements Plugin{
-	public function __construct(ServerAPI $api, $server = false){
+	public function __construct(ServerAPI $a, $server = false){
 		$this->a = $a;
+		$this->s = ServerAPI::request();
 	}
 	public function init(){
+		$this->path = $this->a->plugin->configPath($this)."banned-ips.txt";
+		$this->cPath = $this->a->plugin->configPath($this)."config.yml";
 		$this->a->console->register("dipb", "<player|IP> Bans an IP while discouraging them to bypass it using another name by trolling", array($this, "cmd"));
 		@touch($this->path);
 		$this->banned = explode(PHP_EOL, file_get_contents($this->path));
@@ -22,8 +25,8 @@ class IPDiscourage implements Plugin{
 			"ban broadcast without name (used when the banned IP is offline)" => "@ip has been banned by @banner",
 			"ban message shown to the banned player (if online)" => "You have been banned by @banner!",
 		));
-		$this->a->addHandler("console.command", array($this, "onCmd"), 51);
-		$this->a->addHandler("player.spawn", array($this, "onJoin", 51));
+		$this->s->addHandler("console.command", array($this, "onCmd"), 51);
+		$this->s->addHandler("player.spawn", array($this, "onJoin"), 51);
 	}
 	public function __destruct(){
 		file_put_contents($this->path, implode(PHP_EOL, $this->banned));
