@@ -21,6 +21,9 @@ class LagFixer implements Plugin{
 		$this->api->ban->cmdWhitelist("realhealth");
 	}
 	public function showCmd($c, $a, $issuer){
+		if(!($issuer instanceof Player)){
+			return "Please run this command in-game.";
+		}
 		if(!isset($a[0])){
 			return "Usage: /show <player|all> show an invisible player or attempt to resend all players in your world to you";
 		}
@@ -94,6 +97,9 @@ class LagFixer implements Plugin{
 		return "Packets adding all players have been resent to you.";
 	}
 	public function rhCmd($c, $a, $p){
+		if(!($p instanceof Player)){
+			return "Please run this command in-game.";
+		}
 		$health = $p->entity->getHealth();
 		$pk = new SetHealthPacket;
 		$pk->health = $health;
