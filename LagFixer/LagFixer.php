@@ -33,7 +33,7 @@ class LagFixer implements Plugin{
 			$pk->clientID = 0;
 			$pk->username = $player->username;
 			$e = $player->entity;
-			$pk->eid = $e->eid
+			$pk->eid = $e->eid;
 			$pk->x = $e->x;
 			$pk->y = $e->y;
 			$pk->z = $e->z;
@@ -68,7 +68,7 @@ class LagFixer implements Plugin{
 			$pk->clientID = 0;
 			$pk->username = $player->username;
 			$e = $player->entity;
-			$pk->eid = $e->eid
+			$pk->eid = $e->eid;
 			$pk->x = $e->x;
 			$pk->y = $e->y;
 			$pk->z = $e->z;
