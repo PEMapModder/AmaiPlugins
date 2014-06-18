@@ -93,7 +93,12 @@ class LagFixer implements Plugin{
 		return "Packets adding all players have been resent to you.";
 	}
 	public function rhCmd($c, $a, $p){
-		
+		$health = $p->entity->getHealth();
+		$pk = new SetHealthPacket;
+		$pk->health = $health;
+		$p->dataPacket($pk);
+		$health /= 2;
+		return "You real health ($health hearts) has been updated.";
 	}
 	public function __destruct(){
 	}
