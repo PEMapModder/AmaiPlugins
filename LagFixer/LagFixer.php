@@ -32,6 +32,9 @@ class LagFixer implements Plugin{
 			if(!($player instanceof Player)){
 				return "Player $a[0] not found!";
 			}
+			if($player->entity->eid === $issuer->entity->eid){
+				return "You should be unable to see yourself in the first place!";
+			}
 			$pk = new AddPlayerPacket;
 			$pk->clientID = 0;
 			$pk->username = $player->username;
