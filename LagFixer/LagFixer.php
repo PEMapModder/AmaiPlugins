@@ -54,7 +54,43 @@ class LagFixer implements Plugin{
 			$pk->slot = 0;
 			$issuer->dataPacket($pk);
 			$player->sendArmor($issuer);
+			return "Packet adding $player has been sent to you.";
 		}
+		foreach($this->api->player->getAll() as $player){
+			if($player->eid === $issuer->eid){
+				continue;
+			}
+			if(!($player instanceof Player)){
+				return "Player $a[0] not found!";
+			}
+			$pk = new AddPlayerPacket;
+			$pk->clientID = 0;
+			$pk->username = $player->username;
+			$e = $player->entity;
+			$pk->eid = $e->eid
+			$pk->x = $e->x;
+			$pk->y = $e->y;
+			$pk->z = $e->z;
+			$pk->pitch = $e->pitch;
+			$pk->yaw = $e->yaw;
+			$pk->unknown1 = 0;
+			$pk->unknown2 = 0;
+			$pk->metadata = $e->getMetadata();
+			if($player->entity->level->getName() !== $issuer->entity->level->getName()){
+				$pk->x = 512;
+				$pk->y = 512;
+				$pk->z = 512;
+			}
+			$issuer->dataPacket($pk);
+			$pk = new PlayerEquipmentPacket;
+			$pk->eid = $e->eid;
+			$pk->item = $player->getSlot($player->slot)->getID();
+			$pk->meta = $player->getSlot($player->slot)->getMetadata();
+			$pk->slot = 0;
+			$issuer->dataPacket($pk);
+			$player->sendArmor($issuer);
+		}
+		return "Packets adding all players have been resent to you.";
 	}
 	public function rhCmd($c, $a, $p){
 		
