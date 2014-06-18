@@ -64,7 +64,7 @@ class LagFixer implements Plugin{
 			return "Packet adding $player has been sent to you.";
 		}
 		foreach($this->api->player->getAll() as $player){
-			if($player->eid === $issuer->eid){
+			if($player->entity->eid === $issuer->entity->eid){
 				continue;
 			}
 			if(!($player instanceof Player)){
