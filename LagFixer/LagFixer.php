@@ -35,6 +35,9 @@ class LagFixer implements Plugin{
 			if($player->entity->eid === $issuer->entity->eid){
 				return "You should be unable to see yourself in the first place!";
 			}
+			if(!isset($player->entity)){
+				return "$player is not spawned yet!";
+			}
 			$pk = new AddPlayerPacket;
 			$pk->clientID = 0;
 			$pk->username = $player->username;
@@ -69,6 +72,9 @@ class LagFixer implements Plugin{
 			}
 			if(!($player instanceof Player)){
 				return "Player $a[0] not found!";
+			}
+			if(!isset($player->entity)){
+				continue;
 			}
 			$pk = new AddPlayerPacket;
 			$pk->clientID = 0;
